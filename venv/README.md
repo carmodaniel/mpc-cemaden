@@ -150,5 +150,5 @@ Contribuições são bem-vindas! Sinta-se à vontade para:
 
 ## Licença
 
-MIT License - use livremente!
+MIT License - use livremente.
 
