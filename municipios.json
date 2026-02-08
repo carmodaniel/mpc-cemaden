@@ -1,0 +1,60 @@
+{
+  "SP": [
+    "São Paulo", "Guarulhos", "Campinas", "São Bernardo do Campo",
+    "Santo André", "São José dos Campos", "Sorocaba", "Ribeirão Preto",
+    "Santos", "São Vicente", "Mauá", "Diadema", "Carapicuíba"
+  ],
+  "RJ": [
+    "Rio de Janeiro", "Niterói", "Duque de Caxias", "Nova Iguaçu",
+    "Petrópolis", "Teresópolis", "Nova Friburgo", "Angra dos Reis",
+    "Volta Redonda", "Macaé", "Cabo Frio"
+  ],
+  "MG": [
+    "Belo Horizonte", "Contagem", "Uberlândia", "Juiz de Fora",
+    "Betim", "Montes Claros", "Ribeirão das Neves", "Uberaba"
+  ],
+  "RS": [
+    "Porto Alegre", "Caxias do Sul", "Pelotas", "Canoas",
+    "Santa Maria", "Gravataí", "Viamão", "Novo Hamburgo"
+  ],
+  "PR": [
+    "Curitiba", "Londrina", "Maringá", "Ponta Grossa",
+    "Cascavel", "Foz do Iguaçu", "Colombo"
+  ],
+  "SC": [
+    "Florianópolis", "Joinville", "Blumenau", "São José",
+    "Criciúma", "Chapecó", "Itajaí", "Jaraguá do Sul"
+  ],
+  "BA": [
+    "Salvador", "Feira de Santana", "Vitória da Conquista",
+    "Camaçari", "Juazeiro", "Ilhéus", "Itabuna"
+  ],
+  "PE": [
+    "Recife", "Jaboatão dos Guararapes", "Olinda", "Caruaru",
+    "Petrolina", "Paulista", "Cabo de Santo Agostinho"
+  ],
+  "CE": [
+    "Fortaleza", "Caucaia", "Juazeiro do Norte", "Maracanaú",
+    "Sobral", "Crato", "Itapipoca"
+  ],
+  "ES": [
+    "Vitória", "Vila Velha", "Serra", "Cariacica",
+    "Cachoeiro de Itapemirim", "Linhares"
+  ],
+  "GO": [
+    "Goiânia", "Aparecida de Goiânia", "Anápolis", "Luziânia",
+    "Planaltina"
+  ],
+  "MT": [
+    "Cuiabá", "Várzea Grande", "Rondonópolis", "Sinop"
+  ],
+  "PA": [
+    "Belém", "Ananindeua", "Santarém", "Marabá", "Castanhal"
+  ],
+  "AM": [
+    "Manaus", "Parintins"
+  ],
+  "DF": [
+    "Brasília"
+  ]
+}

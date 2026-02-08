@@ -99,6 +99,38 @@ O servidor oferece 4 ferramentas que o Claude pode usar automaticamente:
 3. **info_sistema_monitoramento** - Detalhes do sistema
 4. **links_cemaden** - Links úteis organizados
 
+## Melhorias técnicas (v2.0)
+
+### Dados estruturados
+- **municipios.json**: Arquivo de dados separado com informações de 15 estados e ~99 municípios monitorados
+- Fácil expansão: Basta adicionar novos estados ao JSON
+
+### Otimizações
+- **Caching de dados**: Municípios carregados uma única vez na inicialização
+- **Type hints robustos**: Tipagem completa com `Dict`, `List`, `Optional`, `Any`
+- **Validação melhorada**: Verifica se estado existe, retorna lista de disponíveis em caso de erro
+- **Tratamento de erros específico**: Diferencia Timeout de outras falhas de rede
+
+### Exemplo de uso da ferramenta com parâmetros
+
+```python
+# Listar todos os municípios
+listar_municipios_monitorados()
+
+# Listar apenas municípios de um estado
+listar_municipios_monitorados(estado="SP")
+```
+
+Resposta com estado inválido:
+```json
+{
+  "sucesso": false,
+  "erro": "Estado 'XX' não encontrado",
+  "estados_disponiveis": ["SP", "RJ", "MG", ...],
+  "nota": "Use a sigla do estado (ex: SP, RJ, MG)"
+}
+```
+
 ## Requisitos
 
 - Python 3.10 ou superior
@@ -109,10 +141,11 @@ O servidor oferece 4 ferramentas que o Claude pode usar automaticamente:
 
 ```
 cemaden-mcp-server/
-├── cemaden_server.py       # Servidor principal
-├── requirements.txt        # Dependências
+├── cemaden_server.py       # Servidor principal MCP
+├── municipios.json        # Dados de municípios por estado
+├── requirements.txt        # Dependências Python
 ├── README.md              # Esta documentação
-└── .gitignore            # Arquivos ignorados
+└── LICENSE.txt            # Licença do projeto
 ```
 
 ## Solução de problemas
@@ -131,6 +164,10 @@ cemaden-mcp-server/
   "command": "C:\\Python311\\python.exe"
   ```
 
+**Quer ver o log de execução?**
+- O servidor cria arquivo `cemaden_mcp_debug.log` com todas as operações
+- Útil para debugging de questões com a integração
+
 ## Sobre o CEMADEN
 
 O CEMADEN é o Centro Nacional de Monitoramento e Alertas de Desastres Naturais, vinculado ao Ministério da Ciência, Tecnologia e Inovação. Monitora 959 municípios brasileiros vulneráveis a desastres naturais.
@@ -147,6 +184,24 @@ Contribuições são bem-vindas! Sinta-se à vontade para:
 - Sugerir novas funcionalidades
 - Melhorar a documentação
 - Enviar pull requests
+
+### Expandir dados de municípios
+
+Para adicionar mais estados ou municípios:
+
+1. Edite `municipios.json` e adicione a sigla do estado com sua lista de cidades:
+```json
+{
+  "DF": ["Brasília"],
+  "GO": ["Goiânia", "Anápolis"],
+  "MG": ["Belo Horizonte", ...],
+  "XX": ["Cidade1", "Cidade2"]  // Novo estado
+}
+```
+
+2. O servidor recarrega automaticamente após reiniciar
+
+Os dados seguem fonte oficial do CEMADEN (959 municípios monitorados em todo Brasil)
 
 ## Licença
 

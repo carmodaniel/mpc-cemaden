@@ -8,7 +8,8 @@ Data: Janeiro 2026
 
 import asyncio
 import json
-from typing import Any
+import os
+from typing import Any, Optional, Dict, List
 import requests
 from datetime import datetime, timedelta
 from mcp.server.models import InitializationOptions
@@ -30,6 +31,9 @@ CEMADEN_PAINEL_BASE = "https://painelalertas.cemaden.gov.br"
 CEMADEN_MAPA_BASE = "https://mapainterativo.cemaden.gov.br"
 TIMEOUT_SEGUNDOS = 15
 
+# Cache de municípios carregado na inicialização
+MUNICIPIOS_CACHE: Optional[Dict[str, List[str]]] = None
+
 # ====================
 # SERVIDOR MCP
 # ====================
@@ -37,13 +41,45 @@ TIMEOUT_SEGUNDOS = 15
 server = Server("cemaden-monitor-server")
 
 # ====================
+# FUNÇÕES UTILITÁRIAS
+# ====================
+
+def carregar_municipios() -> Dict[str, List[str]]:
+    """
+    Carrega dados de municípios do arquivo JSON.
+    
+    Returns:
+        Dicionário com estados como chaves e lista de municípios como valores
+    """
+    global MUNICIPIOS_CACHE
+    
+    if MUNICIPIOS_CACHE is not None:
+        return MUNICIPIOS_CACHE
+    
+    try:
+        arquivo = os.path.join(os.path.dirname(__file__), "municipios.json")
+        with open(arquivo, "r", encoding="utf-8") as f:
+            MUNICIPIOS_CACHE = json.load(f)
+            return MUNICIPIOS_CACHE
+    except FileNotFoundError:
+        print("⚠️  Arquivo municipios.json não encontrado")
+        return {}
+    except json.JSONDecodeError as e:
+        print(f"❌ Erro ao decodificar municipios.json: {e}")
+        return {}
+    except Exception as e:
+        print(f"❌ Erro ao carregar municipios.json: {e}")
+        return {}
+
+
+# ====================
 # FUNÇÕES DE API
 # ====================
 
-def buscar_info_painel_alertas() -> dict:
+def buscar_info_painel_alertas() -> Dict[str, Any]:
     """
-    Busca informações da página de alertas do CEMADEN
-    Como não há API pública, fazemos scraping básico
+    Busca informações da página de alertas do CEMADEN.
+    Valida conexão com o painel interativo.
     
     Returns:
         Dicionário com informações dos alertas
@@ -55,7 +91,7 @@ def buscar_info_painel_alertas() -> dict:
         response = requests.get(url, timeout=TIMEOUT_SEGUNDOS)
         response.raise_for_status()
         
-        # Retorna informações básicas
+        # Retorna informações do painel
         return {
             "sucesso": True,
             "url_painel": url,
@@ -71,6 +107,14 @@ def buscar_info_painel_alertas() -> dict:
             "acesso_direto": url
         }
     
+    except requests.exceptions.Timeout:
+        print(f"⏱️  Timeout ao acessar painel de alertas")
+        return {
+            "sucesso": False,
+            "erro": "Timeout ao acessar painel de alertas",
+            "url_alternativa": "https://painelalertas.cemaden.gov.br/",
+            "nota": "Acesse o link diretamente no navegador para visualizar alertas ativos"
+        }
     except requests.exceptions.RequestException as e:
         print(f"❌ Erro ao acessar painel: {str(e)}")
         return {
@@ -81,106 +125,75 @@ def buscar_info_painel_alertas() -> dict:
         }
 
 
-def buscar_municipios_monitorados(estado: str = None) -> dict:
+def buscar_municipios_monitorados(estado: Optional[str] = None) -> Dict[str, Any]:
     """
-    Lista municípios monitorados pelo CEMADEN
+    Lista municípios monitorados pelo CEMADEN.
     
     Args:
-        estado: Sigla do estado (opcional)
+        estado: Sigla do estado (opcional). Ex: SP, RJ, MG
     
     Returns:
-        Dicionário com municípios
+        Dicionário com municípios ou mensagem de erro
     """
     try:
-        # Lista parcial de municípios monitorados (exemplos por estado)
-        municipios_exemplos = {
-            "SP": [
-                "São Paulo", "Guarulhos", "Campinas", "São Bernardo do Campo",
-                "Santo André", "São José dos Campos", "Sorocaba", "Ribeirão Preto",
-                "Santos", "São Vicente", "Mauá", "Diadema", "Carapicuíba"
-            ],
-            "RJ": [
-                "Rio de Janeiro", "Niterói", "Duque de Caxias", "Nova Iguaçu",
-                "Petrópolis", "Teresópolis", "Nova Friburgo", "Angra dos Reis",
-                "Volta Redonda", "Macaé", "Cabo Frio"
-            ],
-            "MG": [
-                "Belo Horizonte", "Contagem", "Uberlândia", "Juiz de Fora",
-                "Betim", "Montes Claros", "Ribeirão das Neves", "Uberaba"
-            ],
-            "RS": [
-                "Porto Alegre", "Caxias do Sul", "Pelotas", "Canoas",
-                "Santa Maria", "Gravataí", "Viamão", "Novo Hamburgo"
-            ],
-            "PR": [
-                "Curitiba", "Londrina", "Maringá", "Ponta Grossa",
-                "Cascavel", "Foz do Iguaçu", "Colombo"
-            ],
-            "SC": [
-                "Florianópolis", "Joinville", "Blumenau", "São José",
-                "Criciúma", "Chapecó", "Itajaí", "Jaraguá do Sul"
-            ],
-            "BA": [
-                "Salvador", "Feira de Santana", "Vitória da Conquista",
-                "Camaçari", "Juazeiro", "Ilhéus", "Itabuna"
-            ],
-            "PE": [
-                "Recife", "Jaboatão dos Guararapes", "Olinda", "Caruaru",
-                "Petrolina", "Paulista", "Cabo de Santo Agostinho"
-            ],
-            "CE": [
-                "Fortaleza", "Caucaia", "Juazeiro do Norte", "Maracanaú",
-                "Sobral", "Crato", "Itapipoca"
-            ],
-            "ES": [
-                "Vitória", "Vila Velha", "Serra", "Cariacica",
-                "Cachoeiro de Itapemirim", "Linhares"
-            ]
-        }
+        municipios_data = carregar_municipios()
         
-        if estado and estado.upper() in municipios_exemplos:
-            municipios = municipios_exemplos[estado.upper()]
+        if not municipios_data:
             return {
-                "sucesso": True,
-                "estado": estado.upper(),
-                "total": len(municipios),
-                "municipios": municipios,
-                "nota": "Lista parcial de municípios monitorados. Total nacional: 959 municípios.",
-                "fonte": "CEMADEN - Centro Nacional de Monitoramento e Alertas de Desastres Naturais"
-            }
-        elif estado:
-            return {
-                "sucesso": True,
-                "estado": estado.upper(),
-                "mensagem": f"Estado {estado.upper()} não encontrado na lista de exemplos.",
+                "sucesso": False,
+                "erro": "Não foi possível carregar dados de municípios",
                 "nota": "O CEMADEN monitora 959 municípios em todo o Brasil. "
                        "Para lista completa, acesse: http://www2.cemaden.gov.br/"
             }
-        else:
-            total_exemplos = sum(len(m) for m in municipios_exemplos.values())
+        
+        # Se especificou estado, valida e retorna
+        if estado:
+            estado_upper = estado.upper().strip()
+            
+            if estado_upper not in municipios_data:
+                estados_disponiveis = sorted(municipios_data.keys())
+                return {
+                    "sucesso": False,
+                    "erro": f"Estado '{estado}' não encontrado",
+                    "estados_disponiveis": estados_disponiveis,
+                    "total_estados": len(estados_disponiveis),
+                    "nota": "Use a sigla do estado (ex: SP, RJ, MG)"
+                }
+            
+            municipios = municipios_data[estado_upper]
             return {
                 "sucesso": True,
-                "total_nacional": 959,
-                "exemplos_disponiveis": total_exemplos,
-                "estados_com_exemplos": list(municipios_exemplos.keys()),
-                "municipios_por_estado": municipios_exemplos,
-                "fonte": "CEMADEN",
-                "nota": "Estes são exemplos de municípios monitorados. Total nacional: 959 municípios."
+                "estado": estado_upper,
+                "total": len(municipios),
+                "municipios": municipios,
+                "fonte": "CEMADEN - Centro Nacional de Monitoramento e Alertas de Desastres Naturais"
             }
+        
+        # Se não especificou estado, retorna todas as informações
+        total_municipios = sum(len(m) for m in municipios_data.values())
+        return {
+            "sucesso": True,
+            "total_municipal": total_municipios,
+            "total_estados": len(municipios_data),
+            "estados_disponiveis": sorted(municipios_data.keys()),
+            "municipios_por_estado": municipios_data,
+            "fonte": "CEMADEN",
+            "nota": "Para filtrar por estado, use o parâmetro 'estado' com a sigla (SP, RJ, MG, etc)"
+        }
     
     except Exception as e:
         return {
             "sucesso": False,
-            "erro": str(e)
+            "erro": f"Erro ao processar municipios: {str(e)}"
         }
 
 
-def buscar_info_monitoramento() -> dict:
+def buscar_info_monitoramento() -> Dict[str, Any]:
     """
-    Retorna informações sobre o sistema de monitoramento do CEMADEN
+    Retorna informações sobre o sistema de monitoramento do CEMADEN.
     
     Returns:
-        Dicionário com informações do sistema
+        Dicionário com informações completas do sistema
     """
     return {
         "sucesso": True,
@@ -234,15 +247,15 @@ def buscar_info_monitoramento() -> dict:
     }
 
 
-def buscar_links_uteis(tipo: str = None) -> dict:
+def buscar_links_uteis(tipo: Optional[str] = None) -> Dict[str, Any]:
     """
-    Retorna links úteis do CEMADEN
+    Retorna links úteis do CEMADEN.
     
     Args:
         tipo: Tipo de recurso (alertas, dados, educacao)
     
     Returns:
-        Dicionário com links
+        Dicionário com links organizados por categoria
     """
     links = {
         "alertas": {
@@ -450,6 +463,9 @@ async def main():
     Função principal que inicializa e executa o servidor MCP
     """
     import sys
+    
+    # Pré-carrega dados de municípios
+    carregar_municipios()
     
     # Log de inicialização
     try:
